@@ -42,6 +42,12 @@ dist/
 build/
 coverage/
 .turbo/
+.next/
+out/
+.vercel/
+.next/
+out/
+.vercel/
 
 # --- Python / FastAPI (apps/api) ---
 __pycache__/
@@ -102,5 +108,6 @@ mongo-data/
 
 # --- Temporary / Generated Files ---
 docker-compose.override.yml
+ecosystem.config.js
 /data/*.json
 /data/*.csv
