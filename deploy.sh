@@ -11,10 +11,10 @@ set -e
 #    ./deploy.sh
 #
 #  Port (edit below):
-#    API_PORT = 8000   (FastAPI — public, serves /docs)
+#    API_PORT = 8603   (FastAPI — public, serves /docs)
 # ============================================================
 
-API_PORT=8000
+API_PORT=8603
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 API_DIR="$APP_DIR/apps/api"
 
