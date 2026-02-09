@@ -83,23 +83,8 @@ async def save_signal_to_db(signal_data: dict):
                 session.add(channel)
                 await session.flush()
                 
-                # Auto-subscribe ALL active users to the new channel
-                from app.models.user import User
-                from app.models.channel_subscription import ChannelSubscription
-                
-                all_users = await session.execute(select(User).where(User.is_active == True))
-                for user in all_users.scalars().all():
-                    new_sub = ChannelSubscription(
-                        user_id=user.id,
-                        channel_id=channel.id,
-                        is_active=True,
-                        notify_email=True,     # Default to getting emails
-                        notify_telegram=True   # Default to getting telegram msgs
-                    )
-                    session.add(new_sub)
-                
                 await session.flush()
-                logger.info(f"🆕 Created new channel '{channel.name}' and auto-subscribed all users")
+                logger.info(f"🆕 Created new channel '{channel.name}'")
             
             # Create signal record
             signal = Signal(
@@ -155,54 +140,8 @@ async def save_signal_to_db(signal_data: dict):
                 notification_service.notify_subscribers(channel.id, enriched_signal_data)
             )
             
-            # DIRECT email to ALL active users — bypasses subscription system entirely
-            asyncio.create_task(
-                _send_direct_emails_to_all_users(enriched_signal_data)
-            )
-            
     except Exception as e:
         logger.error(f"Failed to save signal: {e}")
-
-
-async def _send_direct_emails_to_all_users(signal_data: dict):
-    """
-    Send email directly to ALL active users for every signal.
-    This bypasses the subscription system entirely — every user
-    with an email address gets notified.
-    """
-    from app.services.email_service import email_service
-    from app.models.user import User
-    from sqlalchemy import select
-    
-    try:
-        if not email_service.is_available:
-            logger.warning("📧 Email service not available — skipping direct emails")
-            return
-        
-        async with async_session_maker() as session:
-            users = (await session.execute(
-                select(User).where(User.is_active == True)
-            )).scalars().all()
-            
-            if not users:
-                logger.warning("📧 No active users found for direct email")
-                return
-            
-            for user in users:
-                if not user.email:
-                    continue
-                try:
-                    result = await email_service.send_signal_notification(
-                        user.email, signal_data
-                    )
-                    if result.get("success"):
-                        logger.info(f"📧 Direct email sent to {user.email}")
-                    else:
-                        logger.error(f"📧 Direct email FAILED to {user.email}: {result.get('error')}")
-                except Exception as e:
-                    logger.error(f"📧 Direct email EXCEPTION to {user.email}: {e}")
-    except Exception as e:
-        logger.error(f"📧 _send_direct_emails_to_all_users error: {e}")
 
 
 @asynccontextmanager

@@ -675,6 +675,7 @@ class UserTelegramManager:
             parsed["channel_id"] = channel_id
             parsed["raw_message_id"] = message_id
             parsed["source"] = "telegram"
+            parsed["user_id"] = user_id  # Associate signal with specific user
 
             status["signals_detected"] = status.get("signals_detected", 0) + 1
 
