@@ -455,6 +455,7 @@ Admin endpoints require `X-Admin-Key` header with valid API key.
 )
 
 # Add CORS middleware - allow all origins for development
+logger.info(f"🔒 CORS Allowed Origins: {settings.cors_origins}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,  # Load from settings (env vars)
