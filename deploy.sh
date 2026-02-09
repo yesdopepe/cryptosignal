@@ -2,23 +2,21 @@
 set -e
 
 # ============================================================
-#  Crypto Signal Aggregator — Zero-Setup Deploy Script
-#  Deploys Next.js frontend + FastAPI backend on any Linux server.
+#  Crypto Signal Aggregator — Zero-Setup Backend Deploy Script
+#  Deploys FastAPI backend on any Linux server.
+#  Frontend is deployed separately (e.g. Vercel).
 #
 #  Usage:
 #    chmod +x deploy.sh
 #    ./deploy.sh
 #
-#  Ports (edit below):
-#    FRONTEND_PORT  = 8603   (Next.js — public)
-#    API_PORT       = 8000   (FastAPI — public, serves /docs)
+#  Port (edit below):
+#    API_PORT = 8000   (FastAPI — public, serves /docs)
 # ============================================================
 
-FRONTEND_PORT=8603
 API_PORT=8000
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 API_DIR="$APP_DIR/apps/api"
-WEB_DIR="$APP_DIR/apps/web"
 
 # Colors
 RED='\033[0;31m'
@@ -34,7 +32,7 @@ info() { echo -e "${CYAN}[→]${NC} $1"; }
 
 echo ""
 echo "============================================"
-echo "  Crypto Signal Aggregator — Deploy Script  "
+echo "  Crypto Signal Aggregator — Backend Deploy "
 echo "============================================"
 echo ""
 
@@ -43,9 +41,26 @@ echo ""
 # ----------------------------------------------------------
 info "Checking system dependencies..."
 
+install_python() {
+    if ! command -v python3 &>/dev/null; then
+        info "Installing Python 3..."
+        if command -v apt-get &>/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y python3 python3-pip python3-venv curl
+        elif command -v dnf &>/dev/null; then
+            sudo dnf install -y python3 python3-pip python3-virtualenv curl
+        elif command -v yum &>/dev/null; then
+            sudo yum install -y python3 python3-pip python3-virtualenv curl
+        fi
+        log "Python installed: $(python3 --version)"
+    else
+        log "Python already installed: $(python3 --version)"
+    fi
+}
+
 install_node() {
     if ! command -v node &>/dev/null; then
-        info "Installing Node.js 18..."
+        info "Installing Node.js 18 (needed for PM2)..."
         if command -v apt-get &>/dev/null; then
             curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
             sudo apt-get install -y nodejs
@@ -65,33 +80,6 @@ install_node() {
     fi
 }
 
-install_python() {
-    if ! command -v python3 &>/dev/null; then
-        info "Installing Python 3..."
-        if command -v apt-get &>/dev/null; then
-            sudo apt-get update
-            sudo apt-get install -y python3 python3-pip python3-venv
-        elif command -v dnf &>/dev/null; then
-            sudo dnf install -y python3 python3-pip python3-virtualenv
-        elif command -v yum &>/dev/null; then
-            sudo yum install -y python3 python3-pip python3-virtualenv
-        fi
-        log "Python installed: $(python3 --version)"
-    else
-        log "Python already installed: $(python3 --version)"
-    fi
-}
-
-install_pnpm() {
-    if ! command -v pnpm &>/dev/null; then
-        info "Installing pnpm..."
-        npm install -g pnpm
-        log "pnpm installed: $(pnpm --version)"
-    else
-        log "pnpm already installed: $(pnpm --version)"
-    fi
-}
-
 install_pm2() {
     if ! command -v pm2 &>/dev/null; then
         info "Installing PM2..."
@@ -102,9 +90,8 @@ install_pm2() {
     fi
 }
 
-install_node
 install_python
-install_pnpm
+install_node
 install_pm2
 
 # ----------------------------------------------------------
@@ -170,25 +157,10 @@ log "Backend dependencies installed"
 deactivate
 
 # ----------------------------------------------------------
-# 4. Install frontend dependencies & build Next.js
+# 4. Detect public IP
 # ----------------------------------------------------------
-info "Setting up Next.js frontend..."
-
-cd "$APP_DIR"
-pnpm install --frozen-lockfile 2>/dev/null || pnpm install
-log "Frontend dependencies installed"
-
-# Detect the server's public IP for the WebSocket URL
 PUBLIC_IP=$(curl -s --max-time 5 ifconfig.me 2>/dev/null || curl -s --max-time 5 icanhazip.com 2>/dev/null || echo "localhost")
 info "Detected public IP: $PUBLIC_IP"
-
-# Build Next.js with the correct WebSocket URL baked in
-export NEXT_PUBLIC_WS_URL="ws://${PUBLIC_IP}:${API_PORT}/api/v1/live/stream"
-info "WebSocket URL set to: $NEXT_PUBLIC_WS_URL"
-
-cd "$WEB_DIR"
-pnpm build
-log "Next.js build complete"
 
 # ----------------------------------------------------------
 # 5. Create PM2 ecosystem file
@@ -211,20 +183,6 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
       merge_logs: true,
     },
-    {
-      name: 'web',
-      cwd: '${WEB_DIR}',
-      script: 'node_modules/.bin/next',
-      args: 'start -p ${FRONTEND_PORT}',
-      interpreter: 'none',
-      env: {
-        NODE_ENV: 'production',
-        NEXT_PUBLIC_WS_URL: 'ws://${PUBLIC_IP}:${API_PORT}/api/v1/live/stream',
-      },
-      max_memory_restart: '512M',
-      log_date_format: 'YYYY-MM-DD HH:mm:ss',
-      merge_logs: true,
-    },
   ],
 };
 PMEOF
@@ -234,7 +192,7 @@ log "PM2 ecosystem config created"
 # ----------------------------------------------------------
 # 6. Stop existing instances (if any) and start fresh
 # ----------------------------------------------------------
-info "Starting services..."
+info "Starting API service..."
 
 cd "$APP_DIR"
 pm2 delete ecosystem.config.js 2>/dev/null || true
@@ -254,22 +212,24 @@ pm2 startup 2>/dev/null | tail -1 | grep -q "sudo" && {
 # ----------------------------------------------------------
 echo ""
 echo "============================================"
-echo -e "  ${GREEN}Deployment Complete!${NC}"
+echo -e "  ${GREEN}Backend Deployment Complete!${NC}"
 echo "============================================"
 echo ""
-echo -e "  Frontend (Next.js):   ${CYAN}http://${PUBLIC_IP}:${FRONTEND_PORT}${NC}"
 echo -e "  API (FastAPI):        ${CYAN}http://${PUBLIC_IP}:${API_PORT}${NC}"
 echo -e "  API Docs (Swagger):   ${CYAN}http://${PUBLIC_IP}:${API_PORT}/docs${NC}"
 echo -e "  API Docs (ReDoc):     ${CYAN}http://${PUBLIC_IP}:${API_PORT}/redoc${NC}"
+echo -e "  Health Check:         ${CYAN}http://${PUBLIC_IP}:${API_PORT}/health${NC}"
 echo -e "  WebSocket:            ${CYAN}ws://${PUBLIC_IP}:${API_PORT}/api/v1/live/stream${NC}"
 echo ""
 echo "  Useful commands:"
-echo "    pm2 status          — Check if services are running"
-echo "    pm2 logs            — View live logs (both services)"
-echo "    pm2 logs api        — View only API logs"
-echo "    pm2 logs web        — View only frontend logs"
-echo "    pm2 restart all     — Restart everything"
-echo "    pm2 stop all        — Stop everything"
+echo "    pm2 status          — Check if the API is running"
+echo "    pm2 logs api        — View API logs"
+echo "    pm2 restart api     — Restart the API"
+echo "    pm2 stop api        — Stop the API"
 echo ""
-echo -e "  ${YELLOW}Make sure ports ${FRONTEND_PORT} and ${API_PORT} are open in your firewall.${NC}"
+echo "  Vercel environment variables for your frontend:"
+echo -e "    API_URL              = ${CYAN}http://${PUBLIC_IP}:${API_PORT}${NC}"
+echo -e "    NEXT_PUBLIC_WS_URL   = ${CYAN}ws://${PUBLIC_IP}:${API_PORT}/api/v1/live/stream${NC}"
+echo ""
+echo -e "  ${YELLOW}Make sure port ${API_PORT} is open in your firewall.${NC}"
 echo ""
