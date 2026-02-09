@@ -1,7 +1,8 @@
 """Application configuration settings."""
 import os
 from functools import lru_cache
-from typing import List, Optional
+from typing import List, Optional, Any
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 # Find the .env file — works whether CWD is workspace root or apps/api
@@ -35,6 +36,15 @@ class Settings(BaseSettings):
     secret_key: str = "change-me-in-production"
     debug: bool = True
     cors_origins: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Any) -> List[str]:
+        if isinstance(v, str) and not v.startswith("["):
+            return [origin.strip() for origin in v.split(",")]
+        elif isinstance(v, (list, str)):
+            return v
+        raise ValueError(v)
     
     # Cache
     cache_enabled: bool = True

@@ -457,7 +457,7 @@ Admin endpoints require `X-Admin-Key` header with valid API key.
 # Add CORS middleware - allow all origins for development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for WebSocket compatibility
+    allow_origins=settings.cors_origins,  # Load from settings (env vars)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
