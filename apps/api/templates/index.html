@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <!-- Total Signals -->
+    <div class="bg-slate-800 rounded-lg p-4 border border-slate-700 card-hover transition-smooth">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-slate-400 text-sm">Total Signals</p>
+                <p id="stat-total-signals" class="text-2xl font-bold mt-1">--</p>
+            </div>
+            <div class="bg-primary-500/20 p-3 rounded-lg">
+                <svg class="w-6 h-6 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Active Channels -->
+    <div class="bg-slate-800 rounded-lg p-4 border border-slate-700 card-hover transition-smooth">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-slate-400 text-sm">Channels</p>
+                <p id="stat-channels" class="text-2xl font-bold mt-1">--</p>
+            </div>
+            <div class="bg-purple-500/20 p-3 rounded-lg">
+                <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Market Sentiment -->
+    <div class="bg-slate-800 rounded-lg p-4 border border-slate-700 card-hover transition-smooth">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-slate-400 text-sm">Sentiment</p>
+                <p id="stat-sentiment" class="text-2xl font-bold mt-1 text-green-500">--</p>
+            </div>
+            <div id="sentiment-icon" class="bg-green-500/20 p-3 rounded-lg">
+                <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Fear & Greed -->
+    <div class="bg-slate-800 rounded-lg p-4 border border-slate-700 card-hover transition-smooth">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-slate-400 text-sm">Fear & Greed</p>
+                <p id="stat-fear-greed" class="text-2xl font-bold mt-1">--</p>
+            </div>
+            <div class="bg-yellow-500/20 p-3 rounded-lg">
+                <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Signal Feed (2 columns on desktop) -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Recent Signals -->
+        <div class="bg-slate-800 rounded-lg border border-slate-700">
+            <div class="p-4 border-b border-slate-700 flex justify-between items-center">
+                <h2 class="text-lg font-semibold">Recent Signals</h2>
+                <div class="flex items-center space-x-2">
+                    <span class="w-2 h-2 rounded-full bg-green-500 pulse-live"></span>
+                    <span class="text-xs text-slate-400">Live</span>
+                </div>
+            </div>
+            <div id="signal-feed" class="divide-y divide-slate-700 max-h-[500px] overflow-y-auto">
+                <!-- Signals will be loaded here -->
+                <div class="p-4 text-center text-slate-400">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-2"></div>
+                    Loading signals...
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-700">
+                <a href="/signals" class="text-primary-500 hover:text-primary-400 text-sm font-medium">
+                    View all signals →
+                </a>
+            </div>
+        </div>
+        
+        <!-- Sentiment Chart -->
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4">
+            <h2 class="text-lg font-semibold mb-4">Sentiment Distribution</h2>
+            <div class="h-64">
+                <canvas id="sentiment-chart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="space-y-6">
+        <!-- Trending Tokens -->
+        <div class="bg-slate-800 rounded-lg border border-slate-700">
+            <div class="p-4 border-b border-slate-700">
+                <h2 class="text-lg font-semibold">Trending Tokens</h2>
+            </div>
+            <div id="trending-tokens" class="divide-y divide-slate-700">
+                <!-- Tokens will be loaded here -->
+                <div class="p-4 text-center text-slate-400">Loading...</div>
+            </div>
+        </div>
+        
+        <!-- Top Channels -->
+        <div class="bg-slate-800 rounded-lg border border-slate-700">
+            <div class="p-4 border-b border-slate-700">
+                <h2 class="text-lg font-semibold">Top Channels</h2>
+            </div>
+            <div id="top-channels" class="divide-y divide-slate-700">
+                <!-- Channels will be loaded here -->
+                <div class="p-4 text-center text-slate-400">Loading...</div>
+            </div>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4">
+            <h2 class="text-lg font-semibold mb-4">24h Overview</h2>
+            <div class="space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Signals (24h)</span>
+                    <span id="stat-24h" class="font-medium">--</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Success Rate</span>
+                    <span id="stat-success" class="font-medium text-green-500">--</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Avg ROI</span>
+                    <span id="stat-roi" class="font-medium">--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let sentimentChart = null;
+    
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadDashboardData();
+        initSentimentChart();
+        
+        // Refresh data every 30 seconds
+        setInterval(loadDashboardData, 30000);
+    });
+    
+    async function loadDashboardData() {
+        try {
+            // Load live stats
+            const statsRes = await fetch('/api/v1/live/stats');
+            const stats = await statsRes.json();
+            
+            document.getElementById('stat-total-signals').textContent = stats.total_signals?.toLocaleString() || '--';
+            document.getElementById('stat-channels').textContent = stats.total_channels || '--';
+            document.getElementById('stat-24h').textContent = stats.signals_last_hour ? (stats.signals_last_hour * 24) + ' (est)' : '--';
+            
+            // Load sentiment data
+            const sentimentRes = await fetch('/api/v1/live/sentiment');
+            const sentiment = await sentimentRes.json();
+            
+            const sentimentEl = document.getElementById('stat-sentiment');
+            sentimentEl.textContent = sentiment.overall_sentiment || '--';
+            sentimentEl.className = 'text-2xl font-bold mt-1 ' + getSentimentClass(sentiment.overall_sentiment);
+            
+            document.getElementById('stat-fear-greed').textContent = sentiment.fear_greed_index || '--';
+            document.getElementById('stat-success').textContent = sentiment.signals_analyzed ? '~60%' : '--';
+            
+            // Update sentiment chart
+            if (sentimentChart) {
+                sentimentChart.data.datasets[0].data = [
+                    sentiment.bullish_percent || 0,
+                    sentiment.bearish_percent || 0,
+                    sentiment.neutral_percent || 0
+                ];
+                sentimentChart.update();
+            }
+            
+            // Load recent signals
+            const signalsRes = await fetch('/api/v1/signals?limit=10');
+            const signals = await signalsRes.json();
+            renderSignalFeed(signals.items);
+            
+            // Load trending tokens
+            const trendingRes = await fetch('/api/v1/live/trending');
+            const trending = await trendingRes.json();
+            renderTrendingTokens(trending.trending);
+            
+            // Load top channels
+            const channelsRes = await fetch('/api/v1/analytics/channels/leaderboard');
+            const channels = await channelsRes.json();
+            renderTopChannels(channels.leaderboard?.slice(0, 5));
+            
+        } catch (error) {
+            console.error('Error loading dashboard data:', error);
+        }
+    }
+    
+    function renderSignalFeed(signals) {
+        const container = document.getElementById('signal-feed');
+        
+        if (!signals || signals.length === 0) {
+            container.innerHTML = '<div class="p-4 text-center text-slate-400">No signals found</div>';
+            return;
+        }
+        
+        container.innerHTML = signals.map(signal => `
+            <div class="p-4 hover:bg-slate-700/50 transition-smooth cursor-pointer" onclick="showSignalDetail(${signal.id})">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-bold text-lg">${signal.token_symbol}</span>
+                            <span class="px-2 py-0.5 rounded text-xs ${getSentimentBg(signal.sentiment)}">${signal.sentiment}</span>
+                        </div>
+                        <p class="text-slate-400 text-sm mt-1 truncate">${signal.message_text?.substring(0, 60)}...</p>
+                        <div class="flex items-center space-x-3 mt-2 text-xs text-slate-500">
+                            <span>${signal.channel_name}</span>
+                            <span>•</span>
+                            <span>${formatTimeAgo(signal.timestamp)}</span>
+                        </div>
+                    </div>
+                    <div class="text-right ml-4">
+                        <p class="font-medium">${formatPrice(signal.price_at_signal)}</p>
+                        ${signal.roi_percent !== null ? `
+                            <p class="${signal.roi_percent >= 0 ? 'text-green-500' : 'text-red-500'} text-sm">
+                                ${formatPercent(signal.roi_percent)}
+                            </p>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function renderTrendingTokens(tokens) {
+        const container = document.getElementById('trending-tokens');
+        
+        if (!tokens || tokens.length === 0) {
+            container.innerHTML = '<div class="p-4 text-center text-slate-400">No trending data</div>';
+            return;
+        }
+        
+        container.innerHTML = tokens.slice(0, 5).map((token, i) => `
+            <div class="p-4 flex items-center justify-between hover:bg-slate-700/50 transition-smooth">
+                <div class="flex items-center space-x-3">
+                    <span class="text-slate-500 font-medium w-6">#${i + 1}</span>
+                    <div>
+                        <p class="font-medium">${token.symbol}</p>
+                        <p class="text-xs text-slate-400">${token.signal_count_24h} signals</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="px-2 py-0.5 rounded text-xs ${getSentimentBg(token.dominant_sentiment)}">
+                        ${token.dominant_sentiment}
+                    </span>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function renderTopChannels(channels) {
+        const container = document.getElementById('top-channels');
+        
+        if (!channels || channels.length === 0) {
+            container.innerHTML = '<div class="p-4 text-center text-slate-400">No channel data</div>';
+            return;
+        }
+        
+        container.innerHTML = channels.map((channel, i) => `
+            <div class="p-4 flex items-center justify-between hover:bg-slate-700/50 transition-smooth">
+                <div class="flex items-center space-x-3">
+                    <span class="text-slate-500 font-medium w-6">#${i + 1}</span>
+                    <div>
+                        <p class="font-medium">${channel.channel_name}</p>
+                        <p class="text-xs text-slate-400">${channel.total_signals?.toLocaleString()} signals</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-green-500 font-medium">${channel.success_rate?.toFixed(1)}%</p>
+                    <p class="text-xs text-slate-400">success</p>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function initSentimentChart() {
+        const ctx = document.getElementById('sentiment-chart').getContext('2d');
+        
+        sentimentChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Bullish', 'Bearish', 'Neutral'],
+                datasets: [{
+                    data: [60, 10, 30],
+                    backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
+                    borderWidth: 0,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#94a3b8',
+                            padding: 20,
+                        }
+                    }
+                },
+                cutout: '60%',
+            }
+        });
+    }
+    
+    function showSignalDetail(id) {
+        // Navigate to signals page with filter
+        window.location.href = `/signals?id=${id}`;
+    }
+    
+    // Handle WebSocket messages
+    function onWebSocketMessage(data) {
+        if (data.type === 'new_signal') {
+            // Refresh signal feed when new signal arrives
+            loadDashboardData();
+        } else if (data.type === 'sentiment_update') {
+            // Update sentiment display
+            const sentimentEl = document.getElementById('stat-sentiment');
+            if (data.data?.overall) {
+                sentimentEl.textContent = data.data.overall;
+            }
+        }
+    }
+</script>
+{% endblock %}

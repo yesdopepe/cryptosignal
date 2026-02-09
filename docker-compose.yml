@@ -1,0 +1,126 @@
+# Crypto Signal Aggregator - Docker Compose Configuration
+# Includes: FastAPI App, PostgreSQL, Redis
+
+services:
+  # ============== FastAPI Application ==============
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: crypto-signal-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://crypto:crypto123@postgres:5432/crypto_signals
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - TELEGRAM_API_ID=${TELEGRAM_API_ID:-}
+      - TELEGRAM_API_HASH=${TELEGRAM_API_HASH:-}
+      - TELEGRAM_PHONE=${TELEGRAM_PHONE:-}
+      - TELEGRAM_MOCK_MODE=true
+      - LOG_LEVEL=INFO
+      - CORS_ORIGINS=["http://localhost:8000","http://localhost:3000"]
+    volumes:
+      - .:/app
+      - app-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - crypto-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ============== PostgreSQL Database ==============
+  postgres:
+    image: postgres:16-alpine
+    container_name: crypto-signal-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=crypto
+      - POSTGRES_PASSWORD=crypto123
+      - POSTGRES_DB=crypto_signals
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - crypto-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crypto -d crypto_signals"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============== Redis Cache ==============
+  redis:
+    image: redis:7-alpine
+    container_name: crypto-signal-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - crypto-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============== Adminer (Database UI) ==============
+  adminer:
+    image: adminer:latest
+    container_name: crypto-signal-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres
+    networks:
+      - crypto-network
+    depends_on:
+      - postgres
+    profiles:
+      - tools
+
+  # ============== Redis Commander (Cache UI) ==============
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: crypto-signal-redis-ui
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    networks:
+      - crypto-network
+    depends_on:
+      - redis
+    profiles:
+      - tools
+
+# ============== Networks ==============
+networks:
+  crypto-network:
+    driver: bridge
+
+# ============== Volumes ==============
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  app-data:
+    driver: local

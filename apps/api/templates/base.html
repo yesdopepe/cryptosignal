@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {% block title %}{{ title }}{% endblock %} | Crypto Signal Aggregator
+    </title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                50: "#f0f9ff",
+                100: "#e0f2fe",
+                200: "#bae6fd",
+                300: "#7dd3fc",
+                400: "#38bdf8",
+                500: "#0ea5e9",
+                600: "#0284c7",
+                700: "#0369a1",
+                800: "#075985",
+                900: "#0c4a6e",
+              },
+              success: "#10b981",
+              warning: "#f59e0b",
+              danger: "#ef4444",
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom styles -->
+    <style>
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #1e293b;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #475569;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+      }
+
+      /* Smooth transitions */
+      .transition-smooth {
+        transition: all 0.3s ease;
+      }
+
+      /* Pulse animation for live indicators */
+      @keyframes pulse-live {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+      .pulse-live {
+        animation: pulse-live 2s infinite;
+      }
+
+      /* Card hover effect */
+      .card-hover:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      }
+
+      /* Mobile touch targets */
+      .touch-target {
+        min-height: 44px;
+        min-width: 44px;
+      }
+    </style>
+
+    {% block head %}{% endblock %}
+  </head>
+  <body class="bg-slate-900 text-slate-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <!-- Logo -->
+          <div class="flex items-center">
+            <a href="/" class="flex items-center space-x-2">
+              <svg
+                class="w-8 h-8 text-primary-500"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                />
+              </svg>
+              <span class="text-xl font-bold hidden sm:block"
+                >Crypto Signals</span
+              >
+            </a>
+          </div>
+
+          <!-- Desktop Navigation -->
+          <div class="hidden md:flex items-center space-x-4">
+            <a
+              href="/"
+              class="px-3 py-2 rounded-md text-sm font-medium {% if request.url.path == '/' %}bg-slate-700 text-white{% else %}text-slate-300 hover:bg-slate-700 hover:text-white{% endif %} transition-smooth"
+            >
+              Dashboard
+            </a>
+            <a
+              href="/signals"
+              class="px-3 py-2 rounded-md text-sm font-medium {% if request.url.path == '/signals' %}bg-slate-700 text-white{% else %}text-slate-300 hover:bg-slate-700 hover:text-white{% endif %} transition-smooth"
+            >
+              Signals
+            </a>
+            <a
+              href="/analytics"
+              class="px-3 py-2 rounded-md text-sm font-medium {% if request.url.path == '/analytics' %}bg-slate-700 text-white{% else %}text-slate-300 hover:bg-slate-700 hover:text-white{% endif %} transition-smooth"
+            >
+              Analytics
+            </a>
+            <a
+              href="/docs"
+              class="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition-smooth"
+            >
+              API Docs
+            </a>
+          </div>
+
+          <!-- Connection Status -->
+          <div class="flex items-center space-x-4">
+            <div id="connection-status" class="flex items-center space-x-2">
+              <span
+                class="w-2 h-2 rounded-full bg-yellow-500 pulse-live"
+              ></span>
+              <span class="text-xs text-slate-400 hidden sm:block"
+                >Connecting...</span
+              >
+            </div>
+
+            <!-- Mobile menu button -->
+            <button
+              id="mobile-menu-btn"
+              class="md:hidden p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 touch-target"
+            >
+              <svg
+                class="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Navigation Menu -->
+      <div
+        id="mobile-menu"
+        class="hidden md:hidden bg-slate-800 border-t border-slate-700"
+      >
+        <div class="px-2 pt-2 pb-3 space-y-1">
+          <a
+            href="/"
+            class="block px-3 py-3 rounded-md text-base font-medium {% if request.url.path == '/' %}bg-slate-700 text-white{% else %}text-slate-300 hover:bg-slate-700{% endif %} touch-target"
+          >
+            Dashboard
+          </a>
+          <a
+            href="/signals"
+            class="block px-3 py-3 rounded-md text-base font-medium {% if request.url.path == '/signals' %}bg-slate-700 text-white{% else %}text-slate-300 hover:bg-slate-700{% endif %} touch-target"
+          >
+            Signals
+          </a>
+          <a
+            href="/analytics"
+            class="block px-3 py-3 rounded-md text-base font-medium {% if request.url.path == '/analytics' %}bg-slate-700 text-white{% else %}text-slate-300 hover:bg-slate-700{% endif %} touch-target"
+          >
+            Analytics
+          </a>
+          <a
+            href="/docs"
+            class="block px-3 py-3 rounded-md text-base font-medium text-slate-300 hover:bg-slate-700 touch-target"
+          >
+            API Documentation
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-800 border-t border-slate-700 mt-auto">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div
+          class="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0"
+        >
+          <p class="text-sm text-slate-400">© 2026 Crypto Signal Aggregator</p>
+          <div class="flex space-x-4 text-sm text-slate-400">
+            <a href="/docs" class="hover:text-white transition-smooth">API</a>
+            <a href="/health" class="hover:text-white transition-smooth"
+              >Status</a
+            >
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Base JavaScript -->
+    <script>
+      // Mobile menu toggle
+      const mobileMenuBtn = document.getElementById("mobile-menu-btn");
+      const mobileMenu = document.getElementById("mobile-menu");
+
+      mobileMenuBtn.addEventListener("click", () => {
+        mobileMenu.classList.toggle("hidden");
+      });
+
+      // WebSocket connection
+      let ws = null;
+      const connectionStatus = document.getElementById("connection-status");
+
+      function connectWebSocket() {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        ws = new WebSocket(
+          `${protocol}//${window.location.host}/api/v1/live/stream`,
+        );
+
+        ws.onopen = () => {
+          connectionStatus.innerHTML = `
+                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                    <span class="text-xs text-slate-400 hidden sm:block">Live</span>
+                `;
+          console.log("WebSocket connected");
+        };
+
+        ws.onclose = () => {
+          connectionStatus.innerHTML = `
+                    <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                    <span class="text-xs text-slate-400 hidden sm:block">Disconnected</span>
+                `;
+          // Reconnect after 5 seconds
+          setTimeout(connectWebSocket, 5000);
+        };
+
+        ws.onerror = (error) => {
+          console.error("WebSocket error:", error);
+        };
+
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          handleWebSocketMessage(data);
+        };
+      }
+
+      function handleWebSocketMessage(data) {
+        // Override in page-specific scripts
+        if (typeof onWebSocketMessage === "function") {
+          onWebSocketMessage(data);
+        }
+      }
+
+      // Initialize WebSocket on page load
+      document.addEventListener("DOMContentLoaded", () => {
+        connectWebSocket();
+      });
+
+      // Utility functions
+      function formatPrice(price) {
+        if (price >= 1000)
+          return (
+            "$" +
+            price.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })
+          );
+        if (price >= 1) return "$" + price.toFixed(4);
+        if (price >= 0.0001) return "$" + price.toFixed(6);
+        return "$" + price.toFixed(10);
+      }
+
+      function formatPercent(value, includeSign = true) {
+        const sign = includeSign && value > 0 ? "+" : "";
+        return sign + value.toFixed(2) + "%";
+      }
+
+      function formatTimeAgo(timestamp) {
+        const now = new Date();
+        const date = new Date(timestamp);
+        const seconds = Math.floor((now - date) / 1000);
+
+        if (seconds < 60) return "just now";
+        if (seconds < 3600) return Math.floor(seconds / 60) + "m ago";
+        if (seconds < 86400) return Math.floor(seconds / 3600) + "h ago";
+        return Math.floor(seconds / 86400) + "d ago";
+      }
+
+      function getSentimentClass(sentiment) {
+        switch (sentiment) {
+          case "BULLISH":
+            return "text-green-500";
+          case "BEARISH":
+            return "text-red-500";
+          default:
+            return "text-yellow-500";
+        }
+      }
+
+      function getSentimentBg(sentiment) {
+        switch (sentiment) {
+          case "BULLISH":
+            return "bg-green-500/20 text-green-400";
+          case "BEARISH":
+            return "bg-red-500/20 text-red-400";
+          default:
+            return "bg-yellow-500/20 text-yellow-400";
+        }
+      }
+    </script>
+
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

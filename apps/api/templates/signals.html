@@ -1,0 +1,471 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-6">
+    <h1 class="text-2xl font-bold">Signals</h1>
+    <p class="text-slate-400">Browse and filter all crypto trading signals</p>
+</div>
+
+<!-- Filters -->
+<div class="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- Search -->
+        <div class="lg:col-span-2">
+            <label class="block text-sm text-slate-400 mb-1">Search</label>
+            <input type="text" id="filter-search" placeholder="Search by token or message..."
+                class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 touch-target">
+        </div>
+        
+        <!-- Token Filter -->
+        <div>
+            <label class="block text-sm text-slate-400 mb-1">Token</label>
+            <select id="filter-token" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary-500 touch-target">
+                <option value="">All Tokens</option>
+                <option value="BTC">BTC</option>
+                <option value="ETH">ETH</option>
+                <option value="SOL">SOL</option>
+                <option value="DOGE">DOGE</option>
+                <option value="PEPE">PEPE</option>
+                <option value="SHIB">SHIB</option>
+                <option value="LINK">LINK</option>
+                <option value="MATIC">MATIC</option>
+                <option value="AVAX">AVAX</option>
+                <option value="DOT">DOT</option>
+            </select>
+        </div>
+        
+        <!-- Sentiment Filter -->
+        <div>
+            <label class="block text-sm text-slate-400 mb-1">Sentiment</label>
+            <select id="filter-sentiment" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary-500 touch-target">
+                <option value="">All</option>
+                <option value="BULLISH">Bullish</option>
+                <option value="BEARISH">Bearish</option>
+                <option value="NEUTRAL">Neutral</option>
+            </select>
+        </div>
+        
+        <!-- Success Filter -->
+        <div>
+            <label class="block text-sm text-slate-400 mb-1">Success</label>
+            <select id="filter-success" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary-500 touch-target">
+                <option value="">All</option>
+                <option value="true">Successful</option>
+                <option value="false">Failed</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="text-sm text-slate-400">
+            <span id="result-count">--</span> signals found
+        </div>
+        <div class="flex gap-2">
+            <button onclick="resetFilters()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-smooth touch-target">
+                Reset Filters
+            </button>
+            <button onclick="applyFilters()" class="px-4 py-2 bg-primary-600 hover:bg-primary-500 rounded-lg text-sm transition-smooth touch-target">
+                Apply Filters
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Desktop Table View (hidden on mobile) -->
+<div class="hidden md:block bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-slate-700">
+                <tr>
+                    <th class="px-4 py-3 text-left text-sm font-medium text-slate-300 cursor-pointer hover:text-white" onclick="sortBy('timestamp')">
+                        Time <span class="sort-indicator"></span>
+                    </th>
+                    <th class="px-4 py-3 text-left text-sm font-medium text-slate-300 cursor-pointer hover:text-white" onclick="sortBy('token_symbol')">
+                        Token <span class="sort-indicator"></span>
+                    </th>
+                    <th class="px-4 py-3 text-left text-sm font-medium text-slate-300 cursor-pointer hover:text-white" onclick="sortBy('channel_name')">
+                        Channel <span class="sort-indicator"></span>
+                    </th>
+                    <th class="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                        Sentiment
+                    </th>
+                    <th class="px-4 py-3 text-right text-sm font-medium text-slate-300 cursor-pointer hover:text-white" onclick="sortBy('price_at_signal')">
+                        Price <span class="sort-indicator"></span>
+                    </th>
+                    <th class="px-4 py-3 text-right text-sm font-medium text-slate-300 cursor-pointer hover:text-white" onclick="sortBy('roi_percent')">
+                        ROI <span class="sort-indicator"></span>
+                    </th>
+                    <th class="px-4 py-3 text-center text-sm font-medium text-slate-300">
+                        Status
+                    </th>
+                    <th class="px-4 py-3 text-center text-sm font-medium text-slate-300">
+                        Action
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="signals-table-body" class="divide-y divide-slate-700">
+                <!-- Table rows will be loaded here -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Mobile Card View (hidden on desktop) -->
+<div class="md:hidden space-y-4" id="signals-cards">
+    <!-- Cards will be loaded here -->
+</div>
+
+<!-- Pagination -->
+<div class="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+    <div class="text-sm text-slate-400">
+        Showing <span id="showing-start">0</span>-<span id="showing-end">0</span> of <span id="total-count">0</span>
+    </div>
+    <div class="flex gap-2">
+        <button id="prev-btn" onclick="prevPage()" disabled
+            class="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm transition-smooth touch-target">
+            ← Previous
+        </button>
+        <span id="page-indicator" class="px-4 py-2 text-sm">Page 1</span>
+        <button id="next-btn" onclick="nextPage()"
+            class="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm transition-smooth touch-target">
+            Next →
+        </button>
+    </div>
+</div>
+
+<!-- Signal Detail Modal -->
+<div id="signal-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" onclick="closeModal()"></div>
+    <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-lg sm:w-full bg-slate-800 rounded-lg border border-slate-700 max-h-[90vh] overflow-y-auto">
+        <div class="p-4 border-b border-slate-700 flex justify-between items-center sticky top-0 bg-slate-800">
+            <h3 class="text-lg font-semibold">Signal Details</h3>
+            <button onclick="closeModal()" class="p-2 hover:bg-slate-700 rounded-lg touch-target">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div id="modal-content" class="p-4">
+            <!-- Modal content will be loaded here -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentPage = 1;
+    let pageSize = 20;
+    let totalSignals = 0;
+    let currentSort = { field: 'timestamp', order: 'desc' };
+    let signals = [];
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        loadSignals();
+        
+        // Add enter key listener to search
+        document.getElementById('filter-search').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') applyFilters();
+        });
+        
+        // Check for ID in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const signalId = urlParams.get('id');
+        if (signalId) {
+            showSignalDetail(parseInt(signalId));
+        }
+    });
+    
+    async function loadSignals() {
+        try {
+            const filters = getFilters();
+            const params = new URLSearchParams({
+                limit: pageSize,
+                offset: (currentPage - 1) * pageSize,
+                ...filters
+            });
+            
+            const response = await fetch(`/api/v1/signals?${params}`);
+            const data = await response.json();
+            
+            signals = data.items;
+            totalSignals = data.total;
+            
+            renderTable();
+            renderCards();
+            updatePagination();
+            
+        } catch (error) {
+            console.error('Error loading signals:', error);
+        }
+    }
+    
+    function getFilters() {
+        const filters = {};
+        
+        const token = document.getElementById('filter-token').value;
+        if (token) filters.token_symbol = token;
+        
+        const sentiment = document.getElementById('filter-sentiment').value;
+        if (sentiment) filters.sentiment = sentiment;
+        
+        const success = document.getElementById('filter-success').value;
+        if (success) filters.success = success;
+        
+        return filters;
+    }
+    
+    function applyFilters() {
+        currentPage = 1;
+        loadSignals();
+    }
+    
+    function resetFilters() {
+        document.getElementById('filter-search').value = '';
+        document.getElementById('filter-token').value = '';
+        document.getElementById('filter-sentiment').value = '';
+        document.getElementById('filter-success').value = '';
+        currentPage = 1;
+        loadSignals();
+    }
+    
+    function renderTable() {
+        const tbody = document.getElementById('signals-table-body');
+        const searchTerm = document.getElementById('filter-search').value.toLowerCase();
+        
+        let filteredSignals = signals;
+        if (searchTerm) {
+            filteredSignals = signals.filter(s => 
+                s.token_symbol.toLowerCase().includes(searchTerm) ||
+                s.message_text.toLowerCase().includes(searchTerm)
+            );
+        }
+        
+        document.getElementById('result-count').textContent = filteredSignals.length;
+        
+        if (filteredSignals.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="px-4 py-8 text-center text-slate-400">
+                        No signals found matching your filters.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        tbody.innerHTML = filteredSignals.map(signal => `
+            <tr class="hover:bg-slate-700/50 transition-smooth">
+                <td class="px-4 py-3 text-sm">${formatTimeAgo(signal.timestamp)}</td>
+                <td class="px-4 py-3">
+                    <span class="font-bold">${signal.token_symbol}</span>
+                    <span class="text-xs text-slate-400 block">${signal.token_name}</span>
+                </td>
+                <td class="px-4 py-3 text-sm">${signal.channel_name}</td>
+                <td class="px-4 py-3">
+                    <span class="px-2 py-1 rounded text-xs ${getSentimentBg(signal.sentiment)}">${signal.sentiment}</span>
+                </td>
+                <td class="px-4 py-3 text-right text-sm">${formatPrice(signal.price_at_signal)}</td>
+                <td class="px-4 py-3 text-right text-sm ${signal.roi_percent >= 0 ? 'text-green-500' : 'text-red-500'}">
+                    ${signal.roi_percent !== null ? formatPercent(signal.roi_percent) : '--'}
+                </td>
+                <td class="px-4 py-3 text-center">
+                    ${signal.success === true ? 
+                        '<span class="text-green-500">✓</span>' : 
+                        signal.success === false ? 
+                        '<span class="text-red-500">✗</span>' : 
+                        '<span class="text-slate-500">-</span>'
+                    }
+                </td>
+                <td class="px-4 py-3 text-center">
+                    <button onclick="showSignalDetail(${signal.id})" class="px-3 py-1 bg-primary-600 hover:bg-primary-500 rounded text-xs transition-smooth">
+                        View
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    
+    function renderCards() {
+        const container = document.getElementById('signals-cards');
+        const searchTerm = document.getElementById('filter-search').value.toLowerCase();
+        
+        let filteredSignals = signals;
+        if (searchTerm) {
+            filteredSignals = signals.filter(s => 
+                s.token_symbol.toLowerCase().includes(searchTerm) ||
+                s.message_text.toLowerCase().includes(searchTerm)
+            );
+        }
+        
+        if (filteredSignals.length === 0) {
+            container.innerHTML = `
+                <div class="bg-slate-800 rounded-lg border border-slate-700 p-8 text-center text-slate-400">
+                    No signals found matching your filters.
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = filteredSignals.map(signal => `
+            <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 card-hover transition-smooth" onclick="showSignalDetail(${signal.id})">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <span class="font-bold text-lg">${signal.token_symbol}</span>
+                        <span class="text-xs text-slate-400 ml-2">${signal.token_name}</span>
+                    </div>
+                    <span class="px-2 py-1 rounded text-xs ${getSentimentBg(signal.sentiment)}">${signal.sentiment}</span>
+                </div>
+                
+                <p class="text-slate-300 text-sm mb-3 line-clamp-2">${signal.message_text?.substring(0, 100)}...</p>
+                
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <p class="text-slate-400">Price</p>
+                        <p class="font-medium">${formatPrice(signal.price_at_signal)}</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-400">ROI</p>
+                        <p class="font-medium ${signal.roi_percent >= 0 ? 'text-green-500' : 'text-red-500'}">
+                            ${signal.roi_percent !== null ? formatPercent(signal.roi_percent) : '--'}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="mt-3 pt-3 border-t border-slate-700 flex justify-between items-center text-xs text-slate-400">
+                    <span>${signal.channel_name}</span>
+                    <span>${formatTimeAgo(signal.timestamp)}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function updatePagination() {
+        const totalPages = Math.ceil(totalSignals / pageSize);
+        const start = (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalSignals);
+        
+        document.getElementById('showing-start').textContent = totalSignals > 0 ? start : 0;
+        document.getElementById('showing-end').textContent = end;
+        document.getElementById('total-count').textContent = totalSignals;
+        document.getElementById('page-indicator').textContent = `Page ${currentPage} of ${totalPages}`;
+        
+        document.getElementById('prev-btn').disabled = currentPage <= 1;
+        document.getElementById('next-btn').disabled = currentPage >= totalPages;
+    }
+    
+    function prevPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            loadSignals();
+        }
+    }
+    
+    function nextPage() {
+        const totalPages = Math.ceil(totalSignals / pageSize);
+        if (currentPage < totalPages) {
+            currentPage++;
+            loadSignals();
+        }
+    }
+    
+    function sortBy(field) {
+        if (currentSort.field === field) {
+            currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort.field = field;
+            currentSort.order = 'desc';
+        }
+        
+        signals.sort((a, b) => {
+            let aVal = a[field];
+            let bVal = b[field];
+            
+            if (field === 'timestamp') {
+                aVal = new Date(aVal);
+                bVal = new Date(bVal);
+            }
+            
+            if (aVal < bVal) return currentSort.order === 'asc' ? -1 : 1;
+            if (aVal > bVal) return currentSort.order === 'asc' ? 1 : -1;
+            return 0;
+        });
+        
+        renderTable();
+        renderCards();
+    }
+    
+    async function showSignalDetail(id) {
+        try {
+            const response = await fetch(`/api/v1/signals/${id}`);
+            const signal = await response.json();
+            
+            const modal = document.getElementById('signal-modal');
+            const content = document.getElementById('modal-content');
+            
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="text-2xl font-bold">${signal.token_symbol}</h4>
+                            <p class="text-slate-400">${signal.token_name}</p>
+                        </div>
+                        <span class="px-3 py-1 rounded ${getSentimentBg(signal.sentiment)}">${signal.sentiment}</span>
+                    </div>
+                    
+                    <div class="bg-slate-700 rounded-lg p-4">
+                        <p class="text-sm text-slate-300">${signal.message_text}</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-slate-700 rounded-lg p-3">
+                            <p class="text-xs text-slate-400">Entry Price</p>
+                            <p class="text-lg font-medium">${formatPrice(signal.price_at_signal)}</p>
+                        </div>
+                        <div class="bg-slate-700 rounded-lg p-3">
+                            <p class="text-xs text-slate-400">Current Price</p>
+                            <p class="text-lg font-medium">${signal.current_price ? formatPrice(signal.current_price) : '--'}</p>
+                        </div>
+                        <div class="bg-slate-700 rounded-lg p-3">
+                            <p class="text-xs text-slate-400">ROI</p>
+                            <p class="text-lg font-medium ${signal.roi_percent >= 0 ? 'text-green-500' : 'text-red-500'}">
+                                ${signal.roi_percent !== null ? formatPercent(signal.roi_percent) : '--'}
+                            </p>
+                        </div>
+                        <div class="bg-slate-700 rounded-lg p-3">
+                            <p class="text-xs text-slate-400">Confidence</p>
+                            <p class="text-lg font-medium">${(signal.confidence_score * 100).toFixed(1)}%</p>
+                        </div>
+                    </div>
+                    
+                    <div class="text-sm text-slate-400 space-y-1">
+                        <p><strong>Channel:</strong> ${signal.channel_name}</p>
+                        <p><strong>Time:</strong> ${new Date(signal.timestamp).toLocaleString()}</p>
+                        <p><strong>Status:</strong> ${signal.success === true ? '✓ Successful' : signal.success === false ? '✗ Failed' : 'Pending'}</p>
+                        ${signal.tags?.length > 0 ? `
+                            <p><strong>Tags:</strong> ${signal.tags.map(t => `<span class="inline-block bg-slate-600 px-2 py-0.5 rounded text-xs mr-1">${t}</span>`).join('')}</p>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+            
+        } catch (error) {
+            console.error('Error loading signal detail:', error);
+        }
+    }
+    
+    function closeModal() {
+        document.getElementById('signal-modal').classList.add('hidden');
+        // Remove ID from URL
+        history.replaceState(null, '', '/signals');
+    }
+    
+    // Close modal on escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+    });
+</script>
+{% endblock %}

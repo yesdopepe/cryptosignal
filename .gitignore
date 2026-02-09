@@ -1,0 +1,106 @@
+# --- Global / OS ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# --- Editor / IDE ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+
+# --- Environment Variables & Secrets ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.pfx
+nginx/ssl/
+
+# --- Logs ---
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# --- Node.js / Monorepo ---
+node_modules/
+dist/
+build/
+coverage/
+.turbo/
+
+# --- Python / FastAPI (apps/api) ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+develop-eggs/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+ENV/
+env/
+.venv/
+
+# Testing & Quality
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints
+
+# Telegram Session
+*.session
+*.session-journal
+
+# --- Next.js / Frontend (apps/web) ---
+.next/
+out/
+.vercel/
+
+# --- Databases & Storage ---
+*.db
+*.sqlite
+*.sqlite3
+*.rdb
+
+# Docker Volumes (Local)
+postgres-data/
+redis-data/
+mongo-data/
+
+# --- Temporary / Generated Files ---
+docker-compose.override.yml
+/data/*.json
+/data/*.csv
